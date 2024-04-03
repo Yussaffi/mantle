@@ -152,6 +152,16 @@ func (a *API) getVMParameters(name, userdata, sshkey, storageAccountURI string, 
 		},
 	}
 
+	if a.Opts.HyperVGeneration == string(compute.HyperVGenerationTypeV2) && a.Opts.UseGallery {
+		vm.SecurityProfile = &compute.SecurityProfile{
+			SecurityType: compute.SecurityTypesTrustedLaunch,
+			UefiSettings: &compute.UefiSettings{
+				SecureBootEnabled: util.BoolToPtr(false),
+				VTpmEnabled:       util.BoolToPtr(true),
+			},
+		}
+	}
+
 	switch a.Opts.DiskController {
 	case "nvme":
 		vm.VirtualMachineProperties.StorageProfile.DiskControllerType = compute.NVMe
