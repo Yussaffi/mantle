@@ -402,14 +402,9 @@ func doAzure(ctx context.Context, client *http.Client, src *storage.Bucket, spec
 			plog.Fatalf("setting up clients: %v", err)
 		}
 
-		plog.Printf("Fetching Azure storage credentials for %q in %q", spec.Azure.StorageAccount, spec.Azure.ResourceGroup)
-
-		storageKey, err := api.GetStorageServiceKeysARM(spec.Azure.StorageAccount, spec.Azure.ResourceGroup)
+		client, err := api.GetBlobServiceClient(spec.Azure.StorageAccount)
 		if err != nil {
-			plog.Fatalf("fetching storage key: %v", err)
-		}
-		if storageKey.Keys == nil {
-			plog.Fatalf("No storage service keys found")
+			plog.Fatalf("failed to create blob service client for %q: %v", spec.Azure.StorageAccount, err)
 		}
 
 		container := spec.Azure.Container
@@ -420,20 +415,16 @@ func doAzure(ctx context.Context, client *http.Client, src *storage.Bucket, spec
 		plog.Printf("Signing %q in %q on %v...", blobName, container, environment.SubscriptionName)
 
 		var url string
-		for _, key := range *storageKey.Keys {
-			blobExists, err := api.BlobExists(spec.Azure.StorageAccount, *key.Value, container, blobName)
-			if err != nil {
-				continue
-			}
-			if !blobExists {
-				plog.Notice("Blob does not exist, skipping.")
-				return
-			}
-			url, err = api.SignBlob(spec.Azure.StorageAccount, *key.Value, container, blobName)
-			if err == nil {
-				break
-			}
+		blobExists, err := azure.BlobExists(client, container, blobName)
+		if err != nil {
+			plog.Fatalf("failed to check if blob %q in account %q container %q exists: %v", blobName, spec.Azure.StorageAccount, container, err)
 		}
+
+		if !blobExists {
+			plog.Notice("Blob does not exist, skipping.")
+			return
+		}
+		url, err = azure.SignBlob(client, container, blobName)
 		if err != nil {
 			plog.Fatalf("signing failed: %v", err)
 		}
