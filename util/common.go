@@ -15,9 +15,13 @@
 package util
 
 func StrToPtr(s string) *string {
-	return &s
+	return ToPtr(s)
 }
 
 func BoolToPtr(b bool) *bool {
-	return &b
+	return ToPtr(b)
+}
+
+func ToPtr[T any](v T) *T {
+	return &v
 }
