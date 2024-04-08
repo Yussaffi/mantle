@@ -93,6 +93,19 @@ type AzureProfile struct {
 	Subscriptions []AzureSubscription `json:"subscriptions"`
 }
 
+type AzureCredentials struct {
+	ClientID                       string `json:"clientId"`
+	ClientSecret                   string `json:"clientSecret"`
+	SubscriptionID                 string `json:"subscriptionId"`
+	TenantID                       string `json:"tenantId"`
+	ActiveDirectoryEndpointURL     string `json:"activeDirectoryEndpointUrl"`
+	ResourceManagerEndpointURL     string `json:"resourceManagerEndpointUrl"`
+	ActiveDirectoryGraphResourceID string `json:"activeDirectoryGraphResourceId"`
+	SQLManagementEndpointURL       string `json:"sqlManagementEndpointUrl"`
+	GalleryEndpointURL             string `json:"galleryEndpointUrl"`
+	ManagementEndpointURL          string `json:"managementEndpointUrl"`
+}
+
 // AsOptions converts all subscriptions into a slice of Options.
 // If there is an environment with a name matching the subscription, that environment's storage endpoint will be copied to the options.
 func (ap *AzureProfile) AsOptions() []Options {
@@ -171,20 +184,38 @@ func (ap *AzureProfile) SubscriptionOptions(filter SubFilter) *Options {
 	return nil
 }
 
+// ReadAzureSubscription decodes an Azure Subscription, as created by
+// the Azure Cross-platform CLI.
+//
+// If path is empty, value of the environment variable
+// AZURE_AUTH_LOCATION is read. If it is empty too, then
+// $HOME/.azure/credentials.json is read.
+func ReadAzureCredentials(path string) (*AzureCredentials, error) {
+	if path == "" {
+		path = os.Getenv("AZURE_AUTH_LOCATION")
+	}
+	contents, err := readBOMFile(path, AzureAuthPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var ac AzureCredentials
+	if err := json.Unmarshal(contents, &ac); err != nil {
+		return nil, err
+	}
+
+	if ac.ClientID == "" || ac.ClientSecret == "" || ac.TenantID == "" || ac.SubscriptionID == "" {
+		return nil, fmt.Errorf("Azure credentials %q are incomplete", path)
+	}
+
+	return &ac, nil
+}
+
 // ReadAzureProfile decodes an Azure Profile, as created by the Azure Cross-platform CLI.
 //
 // If path is empty, $HOME/.azure/azureProfile.json is read.
 func ReadAzureProfile(path string) (*AzureProfile, error) {
-	if path == "" {
-		user, err := user.Current()
-		if err != nil {
-			return nil, err
-		}
-
-		path = filepath.Join(user.HomeDir, AzureProfilePath)
-	}
-
-	contents, err := DecodeBOMFile(path)
+	contents, err := readBOMFile(path, AzureProfilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +230,19 @@ func ReadAzureProfile(path string) (*AzureProfile, error) {
 	}
 
 	return &ap, nil
+}
+
+func readBOMFile(path, defaultFilename string) ([]byte, error) {
+	if path == "" {
+		user, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+
+		path = filepath.Join(user.HomeDir, defaultFilename)
+	}
+
+	return DecodeBOMFile(path)
 }
 
 func DecodeBOMFile(path string) ([]byte, error) {
