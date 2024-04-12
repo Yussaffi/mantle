@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-08-01/compute"
@@ -152,7 +153,9 @@ func (a *API) getVMParameters(name, userdata, sshkey, storageAccountURI string, 
 		},
 	}
 
-	if a.Opts.HyperVGeneration == string(compute.HyperVGenerationTypeV2) && a.Opts.UseGallery {
+	if a.Opts.HyperVGeneration == string(compute.HyperVGenerationTypeV2) &&
+		(a.Opts.UseGallery || strings.Contains(a.Opts.DiskURI, "galleries")) &&
+		a.Opts.Board == "amd64-usr" {
 		vm.SecurityProfile = &compute.SecurityProfile{
 			SecurityType: compute.SecurityTypesTrustedLaunch,
 			UefiSettings: &compute.UefiSettings{
