@@ -304,8 +304,8 @@ func (a *API) TerminateInstance(machine *Machine, resourceGroup string) error {
 	return nil
 }
 
-func (a *API) GetConsoleOutput(name, resourceGroup, storageAccount string) ([]byte, error) {
-	kr, err := a.GetStorageServiceKeysARM(storageAccount, resourceGroup)
+func (a *API) GetConsoleOutput(name, resourceGroup, storageAccountRG, storageAccount string) ([]byte, error) {
+	kr, err := a.GetStorageServiceKeysARM(storageAccount, storageAccountRG)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving storage service keys: %v", err)
 	}
