@@ -39,6 +39,7 @@ type Options struct {
 	UseGallery       bool
 	UseIdentity      bool
 	UsePrivateIPs    bool
+	TrustedLaunch    bool
 
 	DiskController string
 
