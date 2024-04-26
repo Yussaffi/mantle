@@ -24,7 +24,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/classic/management"
 	"github.com/Azure/azure-sdk-for-go/services/classic/management/storageservice"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-01-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2022-05-01/storage"
 )
 
 var (

@@ -31,6 +31,99 @@ func NewAccountsClientWithBaseURI(baseURI string, subscriptionID string) Account
 	return AccountsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
+// AbortHierarchicalNamespaceMigration abort live Migration of storage account to enable Hns
+// Parameters:
+// resourceGroupName - the name of the resource group within the user's subscription. The name is case
+// insensitive.
+// accountName - the name of the storage account within the specified resource group. Storage account names
+// must be between 3 and 24 characters in length and use numbers and lower-case letters only.
+func (client AccountsClient) AbortHierarchicalNamespaceMigration(ctx context.Context, resourceGroupName string, accountName string) (result AccountsAbortHierarchicalNamespaceMigrationFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/AccountsClient.AbortHierarchicalNamespaceMigration")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 24, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil}}},
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("storage.AccountsClient", "AbortHierarchicalNamespaceMigration", err.Error())
+	}
+
+	req, err := client.AbortHierarchicalNamespaceMigrationPreparer(ctx, resourceGroupName, accountName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "storage.AccountsClient", "AbortHierarchicalNamespaceMigration", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.AbortHierarchicalNamespaceMigrationSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "storage.AccountsClient", "AbortHierarchicalNamespaceMigration", result.Response(), "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// AbortHierarchicalNamespaceMigrationPreparer prepares the AbortHierarchicalNamespaceMigration request.
+func (client AccountsClient) AbortHierarchicalNamespaceMigrationPreparer(ctx context.Context, resourceGroupName string, accountName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2022-05-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/aborthnsonmigration", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// AbortHierarchicalNamespaceMigrationSender sends the AbortHierarchicalNamespaceMigration request. The method will close the
+// http.Response Body if it receives an error.
+func (client AccountsClient) AbortHierarchicalNamespaceMigrationSender(req *http.Request) (future AccountsAbortHierarchicalNamespaceMigrationFuture, err error) {
+	var resp *http.Response
+	future.FutureAPI = &azure.Future{}
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// AbortHierarchicalNamespaceMigrationResponder handles the response to the AbortHierarchicalNamespaceMigration request. The method always
+// closes the http.Response Body.
+func (client AccountsClient) AbortHierarchicalNamespaceMigrationResponder(resp *http.Response) (result autorest.Response, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByClosing())
+	result.Response = resp
+	return
+}
+
 // CheckNameAvailability checks that the storage account name is valid and is not already in use.
 // Parameters:
 // accountName - the name of the storage account within the specified resource group. Storage account names
@@ -83,7 +176,7 @@ func (client AccountsClient) CheckNameAvailabilityPreparer(ctx context.Context, 
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -149,16 +242,26 @@ func (client AccountsClient) Create(ctx context.Context, resourceGroupName strin
 			Constraints: []validation.Constraint{{Target: "parameters.Sku", Name: validation.Null, Rule: true, Chain: nil},
 				{Target: "parameters.Location", Name: validation.Null, Rule: true, Chain: nil},
 				{Target: "parameters.AccountPropertiesCreateParameters", Name: validation.Null, Rule: false,
-					Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.CustomDomain", Name: validation.Null, Rule: false,
-						Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.CustomDomain.Name", Name: validation.Null, Rule: true, Chain: nil}}},
+					Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.SasPolicy", Name: validation.Null, Rule: false,
+						Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.SasPolicy.SasExpirationPeriod", Name: validation.Null, Rule: true, Chain: nil},
+							{Target: "parameters.AccountPropertiesCreateParameters.SasPolicy.ExpirationAction", Name: validation.Null, Rule: true, Chain: nil},
+						}},
+						{Target: "parameters.AccountPropertiesCreateParameters.KeyPolicy", Name: validation.Null, Rule: false,
+							Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.KeyPolicy.KeyExpirationPeriodInDays", Name: validation.Null, Rule: true, Chain: nil}}},
+						{Target: "parameters.AccountPropertiesCreateParameters.CustomDomain", Name: validation.Null, Rule: false,
+							Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.CustomDomain.Name", Name: validation.Null, Rule: true, Chain: nil}}},
 						{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication", Name: validation.Null, Rule: false,
 							Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties", Name: validation.Null, Rule: false,
 								Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainName", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.NetBiosDomainName", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.ForestName", Name: validation.Null, Rule: true, Chain: nil},
 									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainGUID", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.DomainSid", Name: validation.Null, Rule: true, Chain: nil},
-									{Target: "parameters.AccountPropertiesCreateParameters.AzureFilesIdentityBasedAuthentication.ActiveDirectoryProperties.AzureStorageSid", Name: validation.Null, Rule: true, Chain: nil},
+								}},
+							}},
+						{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning", Name: validation.Null, Rule: false,
+							Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning.ImmutabilityPolicy", Name: validation.Null, Rule: false,
+								Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning.ImmutabilityPolicy.ImmutabilityPeriodSinceCreationInDays", Name: validation.Null, Rule: false,
+									Chain: []validation.Constraint{{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning.ImmutabilityPolicy.ImmutabilityPeriodSinceCreationInDays", Name: validation.InclusiveMaximum, Rule: int64(146000), Chain: nil},
+										{Target: "parameters.AccountPropertiesCreateParameters.ImmutableStorageWithVersioning.ImmutabilityPolicy.ImmutabilityPeriodSinceCreationInDays", Name: validation.InclusiveMinimum, Rule: int64(1), Chain: nil},
+									}},
 								}},
 							}},
 					}}}},
@@ -190,7 +293,7 @@ func (client AccountsClient) CreatePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -293,7 +396,7 @@ func (client AccountsClient) DeletePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -378,7 +481,7 @@ func (client AccountsClient) FailoverPreparer(ctx context.Context, resourceGroup
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -481,7 +584,7 @@ func (client AccountsClient) GetPropertiesPreparer(ctx context.Context, resource
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -512,6 +615,103 @@ func (client AccountsClient) GetPropertiesResponder(resp *http.Response) (result
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// HierarchicalNamespaceMigration live Migration of storage account to enable Hns
+// Parameters:
+// resourceGroupName - the name of the resource group within the user's subscription. The name is case
+// insensitive.
+// accountName - the name of the storage account within the specified resource group. Storage account names
+// must be between 3 and 24 characters in length and use numbers and lower-case letters only.
+// requestType - required. Hierarchical namespace migration type can either be a hierarchical namespace
+// validation request 'HnsOnValidationRequest' or a hydration request 'HnsOnHydrationRequest'. The validation
+// request will validate the migration whereas the hydration request will migrate the account.
+func (client AccountsClient) HierarchicalNamespaceMigration(ctx context.Context, resourceGroupName string, accountName string, requestType string) (result AccountsHierarchicalNamespaceMigrationFuture, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/AccountsClient.HierarchicalNamespaceMigration")
+		defer func() {
+			sc := -1
+			if result.FutureAPI != nil && result.FutureAPI.Response() != nil {
+				sc = result.FutureAPI.Response().StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}},
+		{TargetValue: accountName,
+			Constraints: []validation.Constraint{{Target: "accountName", Name: validation.MaxLength, Rule: 24, Chain: nil},
+				{Target: "accountName", Name: validation.MinLength, Rule: 3, Chain: nil}}},
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("storage.AccountsClient", "HierarchicalNamespaceMigration", err.Error())
+	}
+
+	req, err := client.HierarchicalNamespaceMigrationPreparer(ctx, resourceGroupName, accountName, requestType)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "storage.AccountsClient", "HierarchicalNamespaceMigration", nil, "Failure preparing request")
+		return
+	}
+
+	result, err = client.HierarchicalNamespaceMigrationSender(req)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "storage.AccountsClient", "HierarchicalNamespaceMigration", result.Response(), "Failure sending request")
+		return
+	}
+
+	return
+}
+
+// HierarchicalNamespaceMigrationPreparer prepares the HierarchicalNamespaceMigration request.
+func (client AccountsClient) HierarchicalNamespaceMigrationPreparer(ctx context.Context, resourceGroupName string, accountName string, requestType string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"accountName":       autorest.Encode("path", accountName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2022-05-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+		"requestType": autorest.Encode("query", requestType),
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/hnsonmigration", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// HierarchicalNamespaceMigrationSender sends the HierarchicalNamespaceMigration request. The method will close the
+// http.Response Body if it receives an error.
+func (client AccountsClient) HierarchicalNamespaceMigrationSender(req *http.Request) (future AccountsHierarchicalNamespaceMigrationFuture, err error) {
+	var resp *http.Response
+	future.FutureAPI = &azure.Future{}
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
+	if err != nil {
+		return
+	}
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = future.result
+	return
+}
+
+// HierarchicalNamespaceMigrationResponder handles the response to the HierarchicalNamespaceMigration request. The method always
+// closes the http.Response Body.
+func (client AccountsClient) HierarchicalNamespaceMigrationResponder(resp *http.Response) (result autorest.Response, err error) {
+	err = autorest.Respond(
+		resp,
+		azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted),
+		autorest.ByClosing())
+	result.Response = resp
 	return
 }
 
@@ -567,7 +767,7 @@ func (client AccountsClient) ListPreparer(ctx context.Context) (*http.Request, e
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -698,7 +898,7 @@ func (client AccountsClient) ListAccountSASPreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -791,7 +991,7 @@ func (client AccountsClient) ListByResourceGroupPreparer(ctx context.Context, re
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -920,7 +1120,7 @@ func (client AccountsClient) ListKeysPreparer(ctx context.Context, resourceGroup
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1019,7 +1219,7 @@ func (client AccountsClient) ListServiceSASPreparer(ctx context.Context, resourc
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1115,7 +1315,7 @@ func (client AccountsClient) RegenerateKeyPreparer(ctx context.Context, resource
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1205,7 +1405,7 @@ func (client AccountsClient) RestoreBlobRangesPreparer(ctx context.Context, reso
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1308,7 +1508,7 @@ func (client AccountsClient) RevokeUserDelegationKeysPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -1404,7 +1604,7 @@ func (client AccountsClient) UpdatePreparer(ctx context.Context, resourceGroupNa
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2021-01-01"
+	const APIVersion = "2022-05-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
